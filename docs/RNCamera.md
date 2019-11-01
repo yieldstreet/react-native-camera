@@ -535,6 +535,8 @@ Supported options:
 
 - `skipProcessing` (android only, boolean). This property skips all image processing on android, this makes taking photos super fast, but you loose some of the information, width, height and the ability to do some processing on the image (base64, width, quality, mirrorImage, exif, etc)
 
+- `cropToPreview` (boolean true or false).  If true, crop the image to the aspect ratio of the preview displayed in the viewfinder. This is useful if you want to create an image of a particular size (for example, a square) or add an overlay.  If no value is specified `cropToPreview:true` is used.
+
 - `doNotSave` (boolean true or false). Use this with `true` if you do not want the picture to be saved as a file to cache. If no value is specified `doNotSave:false` is used. If you only need the base64 for the image, you can use this with `base64:true` and avoid having to save the file.
 
 - `pauseAfterCapture` (boolean true or false). If true, pause the preview layer immediately after capturing the image. You will need to call `cameraRef.resumePreview()` before using the camera again. If no value is specified `pauseAfterCapture:false` is used.

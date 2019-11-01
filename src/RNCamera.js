@@ -104,6 +104,7 @@ type PictureOptions = {
   fixOrientation?: boolean,
   forceUpOrientation?: boolean,
   pauseAfterCapture?: boolean,
+  cropToPreview?: boolean,
 };
 
 type TrackedFaceFeature = FaceFeature & {
@@ -502,6 +503,10 @@ export default class Camera extends React.Component<PropsType, StateType> {
           }
         }
       }
+    }
+
+    if (options.cropToPreview === undefined) {
+      options.cropToPreview = Platform.select({ android: false, ios: true });
     }
 
     if (options.pauseAfterCapture === undefined) {
