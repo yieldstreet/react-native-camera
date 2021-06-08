@@ -131,10 +131,6 @@ public class ResolveTakenPictureAsyncTask extends AsyncTask<Void, Void, Writable
                         break;
                 }
 
-                WritableMap exifData = null;
-                ReadableMap exifExtraData = null;
-                boolean writeExifToResponse = mOptions.hasKey("exif") && mOptions.getBoolean("exif");
-                boolean writeExifToFile = false;
                 if (mOptions.hasKey("writeExif")) {
                     switch (mOptions.getType("writeExif")) {
                         case Boolean:
