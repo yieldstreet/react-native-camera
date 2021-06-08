@@ -19,9 +19,11 @@ package com.google.android.cameraview;
 import android.media.CamcorderProfile;
 import android.view.View;
 import android.graphics.SurfaceTexture;
+import android.os.Handler;
 
 import com.facebook.react.bridge.ReadableMap;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -31,12 +33,19 @@ import java.util.SortedSet;
 abstract class CameraViewImpl {
 
     protected final Callback mCallback;
-
     protected final PreviewImpl mPreview;
 
-    CameraViewImpl(Callback callback, PreviewImpl preview) {
+    // Background handler that the implementation an use to run heavy tasks in background
+    // in a thread/looper provided by the view.
+    // Most calls should not require this since the view will already schedule it
+    // on the bg thread. However, the implementation might need to do some heavy work
+    // by itself.
+    protected final Handler mBgHandler;
+
+    CameraViewImpl(Callback callback, PreviewImpl preview, Handler bgHandler) {
         mCallback = callback;
         mPreview = preview;
+        mBgHandler = bgHandler;
     }
 
     View getView() {
@@ -53,7 +62,7 @@ abstract class CameraViewImpl {
     abstract boolean isCameraOpened();
 
     abstract void setFacing(int facing);
-
+  
     abstract int getFacing();
 
     abstract void setCameraId(String id);
@@ -92,9 +101,13 @@ abstract class CameraViewImpl {
     abstract void takePicture(ReadableMap options);
 
     abstract boolean record(String path, int maxDuration, int maxFileSize,
-                            boolean recordAudio, CamcorderProfile profile, int orientation);
+                            boolean recordAudio, CamcorderProfile profile, int orientation, int fps);
 
     abstract void stopRecording();
+
+    abstract void pauseRecording();
+
+    abstract void resumeRecording();
 
     abstract int getCameraOrientation();
 
@@ -112,9 +125,19 @@ abstract class CameraViewImpl {
 
     abstract float getZoom();
 
+    abstract public ArrayList<int[]> getSupportedPreviewFpsRange();
+
     abstract void setWhiteBalance(int whiteBalance);
 
     abstract int getWhiteBalance();
+
+    abstract void setPlaySoundOnCapture(boolean playSoundOnCapture);
+
+    abstract boolean getPlaySoundOnCapture();
+
+    abstract void setPlaySoundOnRecord(boolean playSoundOnRecord);
+
+    abstract boolean getPlaySoundOnRecord();
 
     abstract void setScanning(boolean isScanning);
 
@@ -137,6 +160,10 @@ abstract class CameraViewImpl {
         void onPictureTaken(byte[] data, int deviceOrientation);
 
         void onVideoRecorded(String path, int videoOrientation, int deviceOrientation);
+
+        void onRecordingStart(String path, int videoOrientation, int deviceOrientation);
+
+        void onRecordingEnd();
 
         void onFramePreview(byte[] data, int width, int height, int orientation);
 

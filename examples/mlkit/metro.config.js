@@ -20,8 +20,11 @@ module.exports = {
   watchFolders: [path.resolve(__dirname, 'node_modules'), reactNativeCameraRoot],
   resolver: {
     blacklistRE: blacklist([
-      new RegExp(`${reactNativeCameraRoot}/examples/mlkit/.*`),
+      new RegExp(`${reactNativeCameraRoot}/examples/basic/.*`),
       new RegExp(`${reactNativeCameraRoot}/node_modules/react-native/.*`),
+      new RegExp(
+        `${reactNativeCameraRoot}/examples/advanced/advanced/node_modules/react-native/.*`,
+      ),
     ]),
   },
 };

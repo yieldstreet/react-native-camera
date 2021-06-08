@@ -3,6 +3,8 @@ package org.reactnative.camera;
 import android.Manifest;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.media.MediaMetadataRetriever;
+import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -20,6 +22,7 @@ import com.google.android.cameraview.Size;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.List;
@@ -270,11 +273,8 @@ public class CameraModule extends ReactContextBaseJavaModule {
                 promise.reject("E_CAMERA_UNAVAILABLE", "Camera is not running");
               }
           }
-          catch(IllegalStateException e){
-            promise.reject("E_CAMERA_UNAVAILABLE", e.getMessage());
-          }
           catch (Exception e) {
-            promise.reject("E_CAMERA_BAD_VIEWTAG", e.getMessage());
+            promise.reject("E_TAKE_PICTURE_FAILED", e.getMessage());
           }
       }
     });
@@ -324,6 +324,48 @@ public class CameraModule extends ReactContextBaseJavaModule {
               }
           }
       });
+  }
+
+  @ReactMethod
+  public void pauseRecording(final int viewTag) {
+    final ReactApplicationContext context = getReactApplicationContext();
+    UIManagerModule uiManager = context.getNativeModule(UIManagerModule.class);
+    uiManager.addUIBlock(new UIBlock() {
+      @Override
+      public void execute(NativeViewHierarchyManager nativeViewHierarchyManager) {
+          final RNCameraView cameraView;
+
+          try {
+              cameraView = (RNCameraView) nativeViewHierarchyManager.resolveView(viewTag);
+              if (cameraView.isCameraOpened()) {
+                  cameraView.pauseRecording();
+              }
+          } catch (Exception e) {
+              e.printStackTrace();
+          }
+      }
+    });
+  }
+
+  @ReactMethod
+  public void resumeRecording(final int viewTag) {
+    final ReactApplicationContext context = getReactApplicationContext();
+    UIManagerModule uiManager = context.getNativeModule(UIManagerModule.class);
+    uiManager.addUIBlock(new UIBlock() {
+      @Override
+      public void execute(NativeViewHierarchyManager nativeViewHierarchyManager) {
+          final RNCameraView cameraView;
+
+          try {
+              cameraView = (RNCameraView) nativeViewHierarchyManager.resolveView(viewTag);
+              if (cameraView.isCameraOpened()) {
+                  cameraView.resumeRecording();
+              }
+          } catch (Exception e) {
+              e.printStackTrace();
+          }
+      }
+    });
   }
 
   @ReactMethod
@@ -424,5 +466,78 @@ public class CameraModule extends ReactContextBaseJavaModule {
           e.printStackTrace();
       }
       promise.resolve(false);
+  }
+
+  @ReactMethod
+  public void getSupportedPreviewFpsRange(final int viewTag, final Promise promise) {
+      final ReactApplicationContext context = getReactApplicationContext();
+      UIManagerModule uiManager = context.getNativeModule(UIManagerModule.class);
+      uiManager.addUIBlock(new UIBlock() {
+          @Override
+          public void execute(NativeViewHierarchyManager nativeViewHierarchyManager) {
+              final RNCameraView cameraView;
+
+              try {
+                  cameraView = (RNCameraView) nativeViewHierarchyManager.resolveView(viewTag);
+                  WritableArray result = Arguments.createArray();
+                  ArrayList<int[]> ranges = cameraView.getSupportedPreviewFpsRange();
+                  for (int[] range : ranges) {
+                      WritableMap m = new WritableNativeMap();
+                      m.putInt("MINIMUM_FPS", range[0]);
+                      m.putInt("MAXIMUM_FPS", range[1]);
+                      result.pushMap(m);
+                  }
+                  promise.resolve(result);
+              } catch (Exception e) {
+                  e.printStackTrace();
+              }
+          }
+      });
+  }
+
+  // Helper method to check for corrupted videos on Android
+  @ReactMethod
+  public void checkIfVideoIsValid(final String path, final Promise promise) {
+
+    // run in a background thread in order to
+    // not block the UI
+    new GuardedAsyncTask<Void, Void>(getReactApplicationContext()) {
+      @Override
+      protected void doInBackgroundGuarded(Void... params) {
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+
+        try{
+          try {
+              retriever.setDataSource(path);
+          }
+          catch (Exception e){
+              e.printStackTrace();
+
+              // if we failed to load the source, also return true
+              // as this may cause false positives.
+              promise.resolve(true);
+              return;
+          }
+
+          // extract a few values since different devices may only report
+          // certain metadata
+          String hasVideo = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_VIDEO);
+          String mimeType = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_MIMETYPE);
+
+          // if we were unable to extract metadata, also return true
+          // since we will otherwise get false positives.
+          //promise.resolve(hasVideo == null || "yes".equals(hasVideo));
+          promise.resolve(hasVideo != null && ("yes".equals(hasVideo) || "true".equals(hasVideo) ||
+            mimeType != null && mimeType.contains("video")));
+        }
+        finally{
+          // this many fail or may not be available in API < 29
+          try{
+            retriever.release();
+          }
+          catch(Throwable e){}
+        }
+      }
+    }.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
   }
 }

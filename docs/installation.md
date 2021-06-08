@@ -3,14 +3,67 @@ id: installation
 title: Installation
 ---
 
-## Requirements
+This document is split into two main sections:
 
-1. JDK >= 1.7 (if you run on 1.6 you will get an error on "\_cameras = new HashMap<>();")
-2. With iOS 10 and higher you need to add the "Privacy - Camera Usage Description" key to the Info.plist of your project. This should be found in 'your_project/ios/your_project/Info.plist'. Add the following code:
+1. Required installation steps for basic usage of `react-native-camera`
+2. Additional installation steps for usage of Face Detection/Text Recognition/BarCode with [MLKit](https://developers.google.com/ml-kit)
 
+# Required installation steps
+
+_These steps assume installation for iOS/Android. To install it with Windows, see [Windows](#windows) below_
+
+## Mostly automatic install with autolinking (RN > 0.60)
+
+1. `npm install react-native-camera --save`
+2. Run `cd ios && pod install && cd ..`
+
+## Mostly automatic install with react-native link (RN < 0.60)
+
+1. `npm install react-native-camera --save`
+2. `react-native link react-native-camera`
+
+## Manual install - iOS (not recommended)
+
+1. `npm install react-native-camera --save`
+2. In XCode, in the project navigator, right click `Libraries` ➜ `Add Files to [your project's name]`
+3. Go to `node_modules` ➜ `react-native-camera` and add `RNCamera.xcodeproj`
+4. Expand the `RNCamera.xcodeproj` ➜ `Products` folder
+5. In XCode, in the project navigator, select your project. Add `libRNCamera.a` to your project's `Build Phases` ➜ `Link Binary With Libraries`
+6. Click `RNCamera.xcodeproj` in the project navigator and go the `Build Settings` tab. Make sure 'All' is toggled on (instead of 'Basic'). In the `Search Paths` section, look for `Header Search Paths` and make sure it contains both `$(SRCROOT)/../../react-native/React` and `$(SRCROOT)/../../../React` - mark both as `recursive`.
+
+## Manual install - Android (not recommended)
+
+1. `npm install react-native-camera --save`
+2. Open up `android/app/src/main/java/[...]/MainApplication.java`
+
+- Add `import org.reactnative.camera.RNCameraPackage;` to the imports at the top of the file
+- Add `new RNCameraPackage()` to the list returned by the `getPackages()` method. Add a comma to the previous item if there's already something there.
+
+3. Append the following lines to `android/settings.gradle`:
+
+```gradle
+include ':react-native-camera'
+project(':react-native-camera').projectDir = new File(rootProject.projectDir, 	'../node_modules/react-native-camera/android')
 ```
+
+4. Insert the following lines in `android/app/build.gradle` inside the dependencies block:
+
+```gradle
+implementation project(':react-native-camera')
+```
+
+## iOS - other required steps
+
+Add permissions with usage descriptions to your app `Info.plist`:
+
+```xml
+<!-- Required with iOS 10 and higher -->
 <key>NSCameraUsageDescription</key>
 <string>Your message to user when the camera is accessed for the first time</string>
+
+<!-- Required with iOS 11 and higher: include this only if you are planning to use the camera roll -->
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>Your message to user when the photo library is accessed for the first time</string>
 
 <!-- Include this only if you are planning to use the camera roll -->
 <key>NSPhotoLibraryUsageDescription</key>
@@ -21,34 +74,10 @@ title: Installation
 <string>Your message to user when the microphone is accessed for the first time</string>
 ```
 
-3. On Android, you require `buildToolsVersion` of `25.0.2+`. _This should easily and automatically be downloaded by Android Studio's SDK Manager._
+<details>
+  <summary>Additional information in case of problems</summary>
 
-4. On iOS 11 and later you need to add `NSPhotoLibraryAddUsageDescription` key to the Info.plist. This key lets you describe the reason your app seeks write-only access to the user’s photo library. Info.plist can be found in 'your_project/ios/your_project/Info.plist'. Add the following code:
-
-```
-<!-- Include this only if you are planning to use the camera roll -->
-<key>NSPhotoLibraryAddUsageDescription</key>
-<string>Your message to user when the photo library is accessed for the first time</string>
-```
-
-## Mostly automatic install with react-native
-
-1. `npm install react-native-camera --save`
-2. `react-native link react-native-camera`
-   _To install it with Windows, see manual install below_
-
-## Mostly automatic install with CocoaPods
-
-1. `npm install react-native-camera --save`
-2. Add the plugin dependency to your Podfile, pointing at the path where NPM installed it:
-
-```obj-c
-pod 'react-native-camera', path: '../node_modules/react-native-camera'
-```
-
-3. Run `pod install`
-
-_Note:_ You might need to adjust your Podfile following the example below:
+You might need to adjust your Podfile following the example below:
 
 ```ruby
 target 'yourTargetName' do
@@ -81,59 +110,96 @@ post_install do |installer|
 end
 ```
 
-## Manual install
+</details>
+
+## Android - other required steps
+
+Add permissions to your app `android/app/src/main/AndroidManifest.xml` file:
+
+```xml
+<!-- Required -->
+<uses-permission android:name="android.permission.CAMERA" />
+
+<!-- Include this only if you are planning to use the camera roll -->
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+<!-- Include this only if you are planning to use the microphone for video recording -->
+<uses-permission android:name="android.permission.RECORD_AUDIO"/>
+```
+
+Insert the following lines in `android/app/build.gradle`:
+
+```gradle
+android {
+  ...
+  defaultConfig {
+    ...
+    missingDimensionStrategy 'react-native-camera', 'general' // <--- insert this line
+  }
+}
+```
+
+<details>
+  <summary>Additional information in case of problems</summary>
+
+1. Make sure you use `JDK >= 1.7` and your `buildToolsVersion >= 25.0.2`
+
+2. Make sure you have jitpack added in `android/build.gradle`
+
+```gradle
+allprojects {
+    repositories {
+        maven { url "https://www.jitpack.io" }
+        maven { url "https://maven.google.com" }
+    }
+}
+```
+
+</details>
+
+# Additional installation steps
+
+Follow these optional steps if you want to use Face Detection/Text Recognition/BarCode with [MLKit](https://developers.google.com/ml-kit).
+You will need to set-up Firebase project for your app (detailed steps below).
+
+_Note:_ Installing [react-native-firebase](https://github.com/invertase/react-native-firebase) package is NOT necessary.
 
 ## iOS
 
-1. `npm install react-native-camera --save`
-2. In XCode, in the project navigator, right click `Libraries` ➜ `Add Files to [your project's name]`
-3. Go to `node_modules` ➜ `react-native-camera` and add `RNCamera.xcodeproj`
-4. Expand the `RNCamera.xcodeproj` ➜ `Products` folder
-5. In XCode, in the project navigator, select your project. Add `libRNCamera.a` to your project's `Build Phases` ➜ `Link Binary With Libraries`
-6. Click `RNCamera.xcodeproj` in the project navigator and go the `Build Settings` tab. Make sure 'All' is toggled on (instead of 'Basic'). In the `Search Paths` section, look for `Header Search Paths` and make sure it contains both `$(SRCROOT)/../../react-native/React` and `$(SRCROOT)/../../../React` - mark both as `recursive`.
-
-### Face Detection/Text Recognition/BarCode(using MLKit) Steps
-
-Face Detection/Text Recognition/BarCode(using MLKit) are optional on iOS. If you want them, you will need to use CocoaPods path and set-up Firebase project for your app (detailed steps below).
-
-_Note:_ Installing react-native-firebase package is NOT necessary.
+If you want any of these optional features, you will need to use CocoaPods.
 
 ### Modifying Podfile
 
-Modify the dependency towards `react-native-camera` in your
-`Podfile`, from
+Add dependency towards `react-native-camera` in your `Podfile` with `subspecs` using one of the following:
 
-```
-pod 'react-native-camera', path: '../node_modules/react-native-camera'
-```
+- For Face Detection:
 
-to (for Face Detection)
-
-```
+```ruby
 pod 'react-native-camera', path: '../node_modules/react-native-camera', subspecs: [
   'FaceDetectorMLKit'
 ]
 ```
 
-or to (for Text Recognition)
+- For Text Recognition:
 
-```
+```ruby
 pod 'react-native-camera', path: '../node_modules/react-native-camera', subspecs: [
   'TextDetector'
 ]
 ```
 
-or to (for Barcode Recognition)
+- For BarCode Recognition:
 
-```
+```ruby
 pod 'react-native-camera', path: '../node_modules/react-native-camera', subspecs: [
   'BarcodeDetectorMLKit'
 ]
 ```
 
-or to (all possible detections)
+- For all possible detections:
 
-```
+```ruby
 pod 'react-native-camera', path: '../node_modules/react-native-camera', subspecs: [
   'TextDetector',
   'FaceDetectorMLKit',
@@ -141,7 +207,9 @@ pod 'react-native-camera', path: '../node_modules/react-native-camera', subspecs
 ]
 ```
 
-## Setting up Firebase
+Then run `cd ios && pod install && cd ..`
+
+### Setting up Firebase
 
 Text/Face recognition for iOS uses Firebase MLKit which requires setting up Firebase project for your app.
 If you have not already added Firebase to your app, please follow the steps described in [getting started guide](https://firebase.google.com/docs/ios/setup).
@@ -163,118 +231,72 @@ In short, you would need to
 }
 ```
 
+<details>
+  <summary>Additional information in case of problems</summary>
+
 - If you have issues with duplicate symbols you will need to enable dead code stripping option in your Xcode (Target > Build Settings > search for "Dead code stripping") [see here](https://github.com/firebase/quickstart-ios/issues/487#issuecomment-415313053).
 - If you are using `pod Firebase/Core` with a version set below 5.13 you might want to add `pod 'GoogleAppMeasurement', '~> 5.3.0'` to your podfile
+  </details>
 
-### Android
+## Android
 
-1. `npm install react-native-camera --save`
-2. Open up `android/app/src/main/java/[...]/MainApplication.java`
+### Modifying build.gradle
 
-- Add `import org.reactnative.camera.RNCameraPackage;` to the imports at the top of the file
-- Add `new RNCameraPackage()` to the list returned by the `getPackages()` method. Add a comma to the previous item if there's already something there.
-
-3. Append the following lines to `android/settings.gradle`:
-
-   ```gradle
-   include ':react-native-camera'
-   project(':react-native-camera').projectDir = new File(rootProject.projectDir, 	'../node_modules/react-native-camera/android')
-   ```
-
-4. Insert the following lines in `android/app/build.gradle`:
-
-inside the dependencies block:
-
-    ```gradle
-    implementation project(':react-native-camera')
-    ```
-
-inside defaultConfig block insert either:
+Modify the following lines in `android/app/build.gradle`:
 
 ```gradle
 android {
   ...
   defaultConfig {
     ...
-    missingDimensionStrategy 'react-native-camera', 'general' <-- insert this line
+    missingDimensionStrategy 'react-native-camera', 'mlkit' // <--- replace general with mlkit
   }
 }
 ```
 
-or, if using MLKit for text/face/barcode recognition:
+### Setting up Firebase
+
+Using Firebase MLKit requires seting up Firebase project for your app. If you have not already added Firebase to your app, please follow the steps described in [getting started guide](https://firebase.google.com/docs/android/setup).
+In short, you would need to
+
+1. Register your app in Firebase console.
+2. Download google-services.json and place it in `android/app/`
+3. Add the folowing to project level `build.gradle`:
 
 ```gradle
-android {
-  ...
-  defaultConfig {
-    ...
-    missingDimensionStrategy 'react-native-camera', 'mlkit' <-- insert this line
+buildscript {
+  dependencies {
+  // Add this line
+  classpath 'com.google.gms:google-services:4.0.1' // <--- you might want to use different version
   }
 }
 ```
 
-5. Declare the permissions in your Android Manifest (required for `video recording` feature)
+4. add to the bottom of `android/app/build.gradle` file
+
+```gradle
+apply plugin: 'com.google.gms.google-services'
+```
+
+5. Configure your app to automatically download the ML model to the device after your app is installed from the Play Store. If you do not enable install-time model downloads, the model will be downloaded the first time you run the on-device detector. Requests you make before the download has completed will produce no results.
 
 ```xml
-<uses-permission android:name="android.permission.RECORD_AUDIO"/>
-<uses-permission android:name="android.permission.CAMERA" />
-<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+<application ...>
+...
+  <meta-data
+      android:name="com.google.firebase.ml.vision.DEPENDENCIES"
+      android:value="ocr, face" /> <!-- choose models that you will use -->
+</application>
 ```
 
-6. Add jitpack to android/build.gradle
+<details>
+  <summary>Additional information in case of problems</summary>
+  The current Android library defaults to the below values for the Google SDK and Libraries,
 
 ```gradle
-allprojects {
-    repositories {
-        maven { url "https://www.jitpack.io" }
-        maven { url "https://maven.google.com" }
-    }
-}
-```
-
-7. Additional steps for using MLKit for text/face/barcode recognition
-
-   7.1. Using Firebase MLKit requires seting up Firebase project for your app. If you have not already added Firebase to your app, please follow the steps described in [getting started guide](https://firebase.google.com/docs/android/setup).
-   In short, you would need to
-
-   - Register your app in Firebase console.
-   - Download google-services.json and place it in `android/app/`
-   - add the folowing to project level build.gradle:
-
-   ```gradle
-       buildscript {
-         dependencies {
-         // Add this line
-         classpath 'com.google.gms:google-services:4.0.1' <-- you might want to use different version
-         }
-       }
-   ```
-
-   - add to the bottom of `android/app/build.gradle` file
-
-   ```gradle
-   apply plugin: 'com.google.gms.google-services'
-   ```
-
-   7.2. Configure your app to automatically download the ML model to the device after your app is installed from the Play Store. If you do not enable install-time model downloads, the model will be downloaded the first time you run the on-device detector. Requests you make before the download has completed will produce no results.
-
-   ```xml
-   <application ...>
-   ...
-     <meta-data
-         android:name="com.google.firebase.ml.vision.DEPENDENCIES"
-         android:value="ocr" />
-     <!-- To use multiple models, list all needed models: android:value="ocr, face, barcode" -->
-   </application>
-   ```
-
-The current Android library defaults to the below values for the Google SDK and Libraries,
-
-```gradle
-def DEFAULT_COMPILE_SDK_VERSION             = 26
-def DEFAULT_BUILD_TOOLS_VERSION             = "26.0.2"
-def DEFAULT_TARGET_SDK_VERSION              = 26
+def DEFAULT_COMPILE_SDK_VERSION             = 29
+def DEFAULT_BUILD_TOOLS_VERSION             = "29.0.2"
+def DEFAULT_TARGET_SDK_VERSION              = 29
 def DEFAULT_GOOGLE_PLAY_SERVICES_VERSION    = "12.0.1"
 def DEFAULT_SUPPORT_LIBRARY_VERSION         = "27.1.0"
 ```
@@ -292,9 +314,9 @@ allprojects {...}
 * Project-wide gradle configuration properties for use by all modules
 */
 ext {
-    compileSdkVersion           = 26
-    targetSdkVersion            = 26
-    buildToolsVersion           = "26.0.2"
+    compileSdkVersion           = 29
+    targetSdkVersion            = 29
+    buildToolsVersion           = "29.0.2"
     googlePlayServicesVersion   = "12.0.1"
     googlePlayServicesVisionVersion = "15.0.2"
     supportLibVersion           = "27.1.0"
@@ -319,7 +341,7 @@ buildscript {
   }
 
   dependencies {
-    classpath 'com.android.tools.build:gradle:3.3.1'
+    classpath 'com.android.tools.build:gradle:4.1.0'
   }
 }
 
@@ -367,7 +389,7 @@ repositories {
   google()
   jcenter()
   maven {
-   url 'https://maven.google.com'
+  url 'https://maven.google.com'
   }
   maven { url "https://jitpack.io" }
   maven {
@@ -393,27 +415,54 @@ dependencies {
 
 If you are using a version of `googlePlayServicesVersion` that does not have `play-services-vision`, you can specify a different version of `play-services-vision` by adding `googlePlayServicesVisionVersion` to the project-wide properties
 
-```
+```gradle
 ext {
-    compileSdkVersion           = 26
-    targetSdkVersion            = 26
-    buildToolsVersion           = "26.0.2"
+    compileSdkVersion           = 29
+    targetSdkVersion            = 29
+    buildToolsVersion           = "29.0.2"
     googlePlayServicesVersion   = "16.0.1"
     googlePlayServicesVisionVersion = "15.0.2"
     supportLibVersion           = "27.1.0"
 }
 ```
 
-### Windows
+</details>
+
+# Windows
+
+## Mostly automatic install with autolinking (RNW >= 0.63)
 
 1. `npm install react-native-camera --save`
-2. Link the library as described here: [react-native-windows / LinkingLibrariesWindows.md](https://github.com/microsoft/react-native-windows/blob/master/current/docs/LinkingLibrariesWindows.md)
-   For the last step of this guide, you have to add the following things to your `MainReactNativeHost.cs`:
+2. See [Additional steps - Windows](#additional-steps-windows) below
 
-- in the import section at the very top: `using RNCamera;`
-- in `protected override List<IReactPackage> Packages => new List<IReactPackage>` add a new line with `new RNCameraPackage()`
+## Manual install - Windows (RNW 0.62)
 
-3. Add the capabilities (permissions) for the webcam and microphone as described here: [docs.microsoft / audio-video-camera](https://docs.microsoft.com/en-us/windows/uwp/audio-video-camera/simple-camera-preview-access#add-capability-declarations-to-the-app-manifest)
-4. Use `RCTCamera` (RNCamera is not supported yet) like described above
+1. `npm install react-native-camera --save`
+2. Link the library as described below:
+   1. Add the _ReactNativeCameraCPP_ project to your solution (eg. `windows\yourapp.sln`)
+      1. Open your solution in Visual Studio 2019
+      2. Right-click Solution icon in Solution Explorer > Add > Existing Project...
+      3. Select `node_modules\react-native-camera\windows\ReactNativeCameraCPP\ReactNativeCameraCPP.vcxproj`
+   2. Add a reference to _ReactNativeCameraCPP_ to your main application project (eg. `windows\yourapp\yourapp.vcxproj`)
+      1. Open your solution in Visual Studio 2019
+      2. Right-click main application project > Add > Reference...
+      3. Check _ReactNativeCameraCPP_ from Solution Projects
+3. Modify files below to add the package providers to your main application project
+   1. `pch.h`
+      1. Add `#include "winrt/ReactNativeCameraCPP.h"`
+   2. `App.cpp`
+      1. Add `PackageProviders().Append(winrt::ReactNativeCameraCPP::ReactPackageProvider());` before `InitializeComponent();`
+4. See [Additional steps - Windows](#additional-steps-windows) below
+
+## Manual install - Windows (RNW 0.61)
+
+Follow [Manual install - Windows (RNW 0.62)](#manual-install-windows-rnw-062) above, but for step 2 substitute _ReactNativeCameraCPP61_ for _ReactNativeCameraCPP_.
+
+## Additional steps - Windows
+
+You need to declare that your app wants to access the camera:
+
+1. Add the capabilities (permissions) for the webcam and microphone as described here: [Add capability declarations to the app manifest](https://docs.microsoft.com/en-us/windows/uwp/audio-video-camera/simple-camera-preview-access#add-capability-declarations-to-the-app-manifest)
+2. If you plan on capturing images to the Pictures Library, or videos to the Videos Library, be sure to enable those capabilities too
 
 Follow the [Q & A](QA.md) section if you are having compilation issues.
