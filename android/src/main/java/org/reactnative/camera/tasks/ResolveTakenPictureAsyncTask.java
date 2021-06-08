@@ -110,7 +110,9 @@ public class ResolveTakenPictureAsyncTask extends AsyncTask<Void, Void, Writable
                 mBitmap = flipHorizontally(mBitmap);
             }
 
-
+            if (mOptions.hasKey("cropToPreview") && mOptions.getBoolean("cropToPreview")) {
+                mBitmap = cropToPreview(mBitmap, mViewFinderSize);
+            }
             // EXIF code - we will adjust exif info later if we manipulated the bitmap
             boolean writeExifToResponse = mOptions.hasKey("exif") && mOptions.getBoolean("exif");
 
@@ -128,9 +130,7 @@ public class ResolveTakenPictureAsyncTask extends AsyncTask<Void, Void, Writable
                         writeExifToFile = true;
                         break;
                 }
-                if (mOptions.hasKey("cropToPreview") && mOptions.getBoolean("cropToPreview")) {
-                    mBitmap = cropToPreview(mBitmap, mViewFinderSize);
-                }
+
                 WritableMap exifData = null;
                 ReadableMap exifExtraData = null;
                 boolean writeExifToResponse = mOptions.hasKey("exif") && mOptions.getBoolean("exif");
